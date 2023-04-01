@@ -1,0 +1,33 @@
+{
+  "name": "homebridge-switchbot-hub-2",
+  "version": "2.0.0",
+  "description": "Homebridge plugin for the Switchbot Hub 2",
+  "main": "index.js",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "ip": ">=1.1.5",
+    "node-fetch": "^3.3.0",
+    "request": ">=2.88.0"
+  },
+  "engines": {
+    "homebridge": ">=0.4.50",
+    "node": "12.22.12 || >=12.13.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alvst/Homebridge-Switchbot-Hub-2.git"
+  },
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "author": "alvst",
+  "forked from": "phenotypic",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alvst/Homebridge-Switchbot-Hub-2/issues"
+  },
+  "homepage": "https://github.com/alvst/Homebridge-Switchbot-Hub-2#readme"
+}
