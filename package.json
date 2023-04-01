@@ -8,7 +8,8 @@
     "fs": "^0.0.1-security",
     "ip": ">=1.1.5",
     "node-fetch": "^3.3.0",
-    "request": ">=2.88.0"
+    "request": ">=2.88.0",
+    "uuid": "^9.0.0"
   },
   "engines": {
     "homebridge": ">=0.4.50",
