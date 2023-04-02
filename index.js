@@ -33,7 +33,7 @@ function TemperatureSensor(log, config) {
 
   this.service = new Service.TemperatureSensor(this.name);
 
-  debugLog.log(this.minInterval);
+  // debugLog.log(this.minInterval);
 
   const getTemperaturePeriodically = () => {
     this.getTemperature.bind(this);
