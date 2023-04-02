@@ -31,6 +31,7 @@ function TemperatureSensor(log, config) {
   this.debug = config.debug || false;
   this.runAgain = true;
   this.degreeUnits = config.degreeUnits || 0;
+  this.previousTemperature = 0;
 
   this.service = new Service.TemperatureSensor(this.name);
 
@@ -71,7 +72,7 @@ TemperatureSensor.prototype = {
 
   getTemperature: function (callback) {
     this.log('Get Temperature');
-    callback(null, 0);
+    callback(null, this.previousTemperature);
 
     return new Promise((resolve, reject) => {
       this.debugLog('Getting current relative humidity');
@@ -189,6 +190,7 @@ function HumiditySensor(log, config) {
     this.configInterval < 120000 ? 120000 : this.configInterval;
   this.debug = config.debug || false;
   this.runAgain = true;
+  this.previousHumidity = 0;
 
   this.service = new Service.HumiditySensor(this.name);
 
@@ -231,7 +233,7 @@ HumiditySensor.prototype = {
 
   getHumidity: function (callback) {
     this.log('Get Humidity');
-    callback(null, 0);
+    callback(null, this.previousHumidity);
 
     return new Promise((resolve, reject) => {
       this.debugLog('Getting current relative humidity');
