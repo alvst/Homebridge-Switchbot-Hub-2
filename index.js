@@ -17,6 +17,9 @@ module.exports = function (homebridge) {
     'Temperature Sensor',
     TemperatureSensor
   );
+
+  output = {};
+  newRefresh = false;
 };
 
 function TemperatureSensor(log, config) {
@@ -39,7 +42,7 @@ function TemperatureSensor(log, config) {
     this.getTemperature.bind(this);
 
     if (this.runAgain === true) {
-      this.debugLog(`Checking humidity again in ${this.minInterval}`);
+      this.debugLog(`Checking data again in ${this.minInterval}`);
       setTimeout(getTemperaturePeriodically, this.minInterval);
     } else {
       this.errorLog('Not running again. DeviceId not found');
@@ -75,7 +78,7 @@ TemperatureSensor.prototype = {
     callback(null, this.previousTemperature);
 
     return new Promise((resolve, reject) => {
-      this.debugLog('Getting current relative humidity');
+      this.debugLog('Getting current data from SwitchBot API');
 
       const t = Date.now();
       const nonce = 'requestID';
@@ -121,7 +124,9 @@ TemperatureSensor.prototype = {
         });
         res.on('end', () => {
           const response = JSON.parse(data);
-          humidity = response.body.humidity;
+          output = response;
+          newRefresh = true;
+          this.debugLog('Update available. Refreshing data.');
           resolve(response);
         });
       });
@@ -195,14 +200,9 @@ function HumiditySensor(log, config) {
   this.service = new Service.HumiditySensor(this.name);
 
   const getHumidityPeriodically = () => {
-    this.getHumidity.bind(this);
+    this.getHumidity.bind(this)();
 
-    if (this.runAgain === true) {
-      this.debugLog(`Checking humidity again in ${this.minInterval}`);
-      setTimeout(getHumidityPeriodically, this.minInterval); // Set timeout to call the function again after 4 seconds
-    } else {
-      this.errorLog('Not running again. DeviceId not found');
-    }
+    setTimeout(getHumidityPeriodically, 5000);
   };
 
   // Call the function to start getting humidity periodically
@@ -231,92 +231,21 @@ HumiditySensor.prototype = {
     }
   },
 
-  getHumidity: function (callback) {
-    this.log('Get Humidity');
-    callback(null, this.previousHumidity);
-
-    return new Promise((resolve, reject) => {
+  getHumidity: function () {
+    if (this.runAgain && newRefresh) {
       this.debugLog('Getting current relative humidity');
 
-      const t = Date.now();
-      const nonce = 'requestID';
-      const data = this.token + t + nonce;
-      const signTerm = crypto
-        .createHmac('sha256', this.secret)
-        .update(Buffer.from(data, 'utf-8'))
-        .digest();
-      const sign = signTerm.toString('base64');
-
-      const body = JSON.stringify({
-        command: 'turnOn',
-        parameter: 'default',
-        commandType: 'command',
-      });
-
-      const options = {
-        hostname: 'api.switch-bot.com',
-        port: 443,
-        path: `/v1.1/devices/${this.deviceId}/status`,
-        method: 'GET',
-        headers: {
-          Authorization: this.token,
-          sign: sign,
-          nonce: nonce,
-          t: t,
-          'Content-Type': 'application/json',
-          'Content-Length': body.length,
-        },
-      };
-
-      const req = https.request(options, (res) => {
-        if (res.statusCode != 200) {
-          errorLog.log(
-            `StatusCode: ${res.statusCode}. Could not create session. Please check your token and secret.`
-          );
-          reject(res.statusCode);
-        }
-
-        let data = '';
-        res.on('data', (d) => {
-          data += d;
-        });
-        res.on('end', () => {
-          const response = JSON.parse(data);
-          humidity = response.body.humidity;
-          resolve(response);
-        });
-      });
-
-      req.on('error', (error) => {
-        errorLog(error);
-        reject(error);
-      });
-
-      req.write(body);
-
-      req.end();
-    }).then((response) => {
-      if (response.statusCode !== 100) {
-        if (response.message.includes('no deviceId')) {
-          this.errorLog(
-            'No Device Id found. Please update your device ID and restart Homebridge.'
-          );
-        } else {
-          this.errorLog(
-            `DeviceId: ${this.deviceId} was not found. Please update your device ID and restart Homebridge.`
-          );
-        }
-        this.runAgain = false;
-        return;
-      }
-
-      this.debugLog(`Current temperature is ${response.body.temperature}`);
+      this.debugLog(`Current humidity is ${output.body.humidity}`);
       this.service
         .getCharacteristic(Characteristic.CurrentRelativeHumidity)
-        .updateValue(response.body.humidity);
-
-      return;
-    });
+        .updateValue(output.body.humidity);
+      newRefresh = false;
+    } else {
+      if (Object.keys(output).length === 0) {
+        this.debugLog('No Data');
+      } else this.debugLog('No New Data');
+    }
+    return;
   },
 
   getServices: function () {
