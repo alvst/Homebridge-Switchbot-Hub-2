@@ -234,6 +234,7 @@ HumiditySensor.prototype = {
   getHumidity: function () {
     if (this.runAgain && newRefresh) {
       this.debugLog('Getting current relative humidity');
+      this.previousHumidity = output.body.humidity;
 
       this.debugLog(`Current humidity is ${output.body.humidity}`);
       this.service
@@ -243,7 +244,12 @@ HumiditySensor.prototype = {
     } else {
       if (Object.keys(output).length === 0) {
         this.debugLog('No Data');
-      } else this.debugLog('No New Data');
+      } else {
+        this.debugLog('No New Data');
+        this.service
+          .getCharacteristic(Characteristic.CurrentRelativeHumidity)
+          .updateValue(previousHumidity);
+      }
     }
     return;
   },
