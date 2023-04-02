@@ -248,7 +248,7 @@ HumiditySensor.prototype = {
         this.debugLog('No New Data');
         this.service
           .getCharacteristic(Characteristic.CurrentRelativeHumidity)
-          .updateValue(previousHumidity);
+          .updateValue(this.previousHumidity);
       }
     }
     return;
