@@ -30,10 +30,9 @@ function TemperatureSensor(log, config) {
     this.configInterval < 120000 ? 120000 : this.configInterval;
   this.debug = config.debug || false;
   this.runAgain = true;
+  this.degreeUnits = config.degreeUnits || 0;
 
   this.service = new Service.TemperatureSensor(this.name);
-
-  // debugLog.log(this.minInterval);
 
   const getTemperaturePeriodically = () => {
     this.getTemperature.bind(this);
@@ -108,7 +107,6 @@ TemperatureSensor.prototype = {
       };
 
       const req = https.request(options, (res) => {
-        // this.debugLog(`statusCode: ${res.statusCode}`);
         if (res.statusCode != 200) {
           errorLog.log(
             `StatusCode: ${res.statusCode}. Could not create session. Please check your token and secret.`
@@ -122,7 +120,6 @@ TemperatureSensor.prototype = {
         });
         res.on('end', () => {
           const response = JSON.parse(data);
-          // console.log(response);
           humidity = response.body.humidity;
           resolve(response);
         });
@@ -171,7 +168,7 @@ TemperatureSensor.prototype = {
     // Needed
     this.service
       .getCharacteristic(Characteristic.TemperatureDisplayUnits)
-      .updateValue(1);
+      .updateValue(this.degreeUnits);
 
     this.service
       .getCharacteristic(Characteristic.CurrentTemperature)
@@ -270,7 +267,6 @@ HumiditySensor.prototype = {
       };
 
       const req = https.request(options, (res) => {
-        // this.debugLog(`statusCode: ${res.statusCode}`);
         if (res.statusCode != 200) {
           errorLog.log(
             `StatusCode: ${res.statusCode}. Could not create session. Please check your token and secret.`
@@ -284,7 +280,6 @@ HumiditySensor.prototype = {
         });
         res.on('end', () => {
           const response = JSON.parse(data);
-          // console.log(response);
           humidity = response.body.humidity;
           resolve(response);
         });
