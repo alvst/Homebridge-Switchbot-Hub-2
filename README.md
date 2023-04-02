@@ -10,7 +10,7 @@
 
 ## Configuration
 
-1. Configure the accessories portion of your config.json by adding accessories for both Humidity and Temperature. ()
+1. Configure the accessories portion of your config.json by adding accessories for both Humidity and Temperature. (Since both are used in this plugin, use of both is required.)
 
 ```json
     "accessories": [
