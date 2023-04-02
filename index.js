@@ -29,30 +29,22 @@ function TemperatureSensor(log, config) {
   this.minInterval =
     this.configInterval < 120000 ? 120000 : this.configInterval;
   this.debug = config.debug || false;
-  console.log(this.minInterval);
   this.runAgain = true;
 
   this.service = new Service.TemperatureSensor(this.name);
 
-  let result = this.getTemperature.bind(this);
+  const getTemperaturePeriodically = () => {
+    this.getTemperature.bind(this);
 
-  // const getTemperaturePeriodically = () => {
-  //   let result = this.getTemperature.bind(this);
+    if (this.runAgain === true) {
+      this.debugLog(`Checking humidity again in ${this.minInterval}`);
+      setTimeout(getTemperaturePeriodically, this.minInterval);
+    } else {
+      this.errorLog('Not running again. DeviceId not found');
+    }
+  };
 
-  //   this.errorLog(result);
-  //   console.log('here');
-
-  //   if (result != 'error') {
-  //     this.debugLog(`Checking temperature again in ${this.minInterval}`);
-  //     setTimeout(getTemperaturePeriodically, 15000);
-  //   } else {
-  //     this.debugLog('Not running again. DeviceId not found');
-  //   }
-  // };
-
-  // Call the function to start getting humidity periodically
-  // getTemperaturePeriodically.call(this);
-
+  getTemperaturePeriodically.call(this);
   this.log('Testing Temperature Sensor');
 
   return;
@@ -77,97 +69,93 @@ TemperatureSensor.prototype = {
   },
 
   getTemperature: function (callback) {
-    this.debugLog('Checking Temperature');
-
+    this.log('Get Temperature');
     callback(null, 0);
 
-    if (!this.runAgain) {
-      return new Promise((resolve, reject) => {
-        this.debugLog('Getting current temperature');
+    return new Promise((resolve, reject) => {
+      this.debugLog('Getting current relative humidity');
 
-        const t = Date.now();
-        const nonce = 'requestID';
-        const data = this.token + t + nonce;
-        const signTerm = crypto
-          .createHmac('sha256', this.secret)
-          .update(Buffer.from(data, 'utf-8'))
-          .digest();
-        const sign = signTerm.toString('base64');
+      const t = Date.now();
+      const nonce = 'requestID';
+      const data = this.token + t + nonce;
+      const signTerm = crypto
+        .createHmac('sha256', this.secret)
+        .update(Buffer.from(data, 'utf-8'))
+        .digest();
+      const sign = signTerm.toString('base64');
 
-        const body = JSON.stringify({
-          command: 'turnOn',
-          parameter: 'default',
-          commandType: 'command',
-        });
+      const body = JSON.stringify({
+        command: 'turnOn',
+        parameter: 'default',
+        commandType: 'command',
+      });
 
-        const options = {
-          hostname: 'api.switch-bot.com',
-          port: 443,
-          path: `/v1.1/devices/${this.deviceId}/status`,
-          method: 'GET',
-          headers: {
-            Authorization: this.token,
-            sign: sign,
-            nonce: nonce,
-            t: t,
-            'Content-Type': 'application/json',
-            'Content-Length': body.length,
-          },
-        };
+      const options = {
+        hostname: 'api.switch-bot.com',
+        port: 443,
+        path: `/v1.1/devices/${this.deviceId}/status`,
+        method: 'GET',
+        headers: {
+          Authorization: this.token,
+          sign: sign,
+          nonce: nonce,
+          t: t,
+          'Content-Type': 'application/json',
+          'Content-Length': body.length,
+        },
+      };
 
-        const req = https.request(options, (res) => {
-          // this.debugLog(`statusCode: ${res.statusCode}`);
-          if (res.statusCode != 200) {
-            errorLog.log(
-              `StatusCode: ${res.statusCode}. Could not create session. Please check your token and secret.`
-            );
-            reject(res.statusCode);
-          }
-
-          let data = '';
-          res.on('data', (d) => {
-            data += d;
-          });
-          res.on('end', () => {
-            const response = JSON.parse(data);
-            humidity = response.body.humidity;
-            resolve(response);
-          });
-        });
-
-        req.on('error', (error) => {
-          errorLog(error);
-          reject(error);
-        });
-
-        req.write(body);
-
-        req.end();
-      }).then((response) => {
-        if (response.statusCode !== 100) {
-          if (response.message.includes('no deviceId')) {
-            this.errorLog(
-              'No deviceId found. Please update your device ID and restart Homebridge.'
-            );
-          } else {
-            this.errorLog(
-              `DeviceId: ${this.deviceId} was not found. Please update your device ID and restart Homebridge.`
-            );
-          }
-          console.log('error');
-          return false;
+      const req = https.request(options, (res) => {
+        // this.debugLog(`statusCode: ${res.statusCode}`);
+        if (res.statusCode != 200) {
+          errorLog.log(
+            `StatusCode: ${res.statusCode}. Could not create session. Please check your token and secret.`
+          );
+          reject(res.statusCode);
         }
 
-        this.debugLog(`Current temperature is ${response.body.temperature}`);
-        this.service
-          .getCharacteristic(Characteristic.CurrentTemperature)
-          .updateValue(response.body.temperature);
-
-        return;
+        let data = '';
+        res.on('data', (d) => {
+          data += d;
+        });
+        res.on('end', () => {
+          const response = JSON.parse(data);
+          // console.log(response);
+          humidity = response.body.humidity;
+          resolve(response);
+        });
       });
-    }
 
-    setTimeout(this.getTemperature, 15000);
+      req.on('error', (error) => {
+        errorLog(error);
+        reject(error);
+      });
+
+      req.write(body);
+
+      req.end();
+    }).then((response) => {
+      if (response.statusCode !== 100) {
+        if (response.message.includes('no deviceId')) {
+          this.errorLog(
+            'No Device Id found. Please update your device ID and restart Homebridge.'
+          );
+        } else {
+          this.errorLog(
+            `DeviceId: ${this.deviceId} was not found. Please update your device ID and restart Homebridge.`
+          );
+        }
+        this.runAgain = false;
+        return;
+      }
+
+      this.debugLog(`Current temperature is ${response.body.temperature}`);
+      this.service
+        .getCharacteristic(Characteristic.CurrentTemperature)
+        .updateValue(response.body.temperature);
+
+      return;
+    });
   },
 
   getServices: function () {
@@ -201,19 +189,19 @@ function HumiditySensor(log, config) {
   this.minInterval =
     this.configInterval < 120000 ? 120000 : this.configInterval;
   this.debug = config.debug || false;
+  this.runAgain = true;
   console.log(this.minInterval);
 
   this.service = new Service.HumiditySensor(this.name);
 
   const getHumidityPeriodically = () => {
-    let result = this.getHumidity.bind(this);
-    console.log('here');
-    console.log(result);
-    if (result != 'error') {
+    this.getHumidity.bind(this);
+
+    if (this.runAgain === true) {
       this.debugLog(`Checking humidity again in ${this.minInterval}`);
       setTimeout(getHumidityPeriodically, this.minInterval); // Set timeout to call the function again after 4 seconds
     } else {
-      this.debugLog('Not running again. DeviceId not found');
+      this.errorLog('Not running again. DeviceId not found');
     }
   };
 
@@ -320,9 +308,8 @@ HumiditySensor.prototype = {
             `DeviceId: ${this.deviceId} was not found. Please update your device ID and restart Homebridge.`
           );
         }
-
-        console.log('error');
-        return 'error';
+        this.runAgain = false;
+        return;
       }
 
       this.debugLog(`Current temperature is ${response.body.temperature}`);
