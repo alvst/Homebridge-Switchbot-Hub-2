@@ -33,6 +33,8 @@ function TemperatureSensor(log, config) {
 
   this.service = new Service.TemperatureSensor(this.name);
 
+  debugLog.log(this.minInterval);
+
   const getTemperaturePeriodically = () => {
     this.getTemperature.bind(this);
 
@@ -190,7 +192,6 @@ function HumiditySensor(log, config) {
     this.configInterval < 120000 ? 120000 : this.configInterval;
   this.debug = config.debug || false;
   this.runAgain = true;
-  console.log(this.minInterval);
 
   this.service = new Service.HumiditySensor(this.name);
 
